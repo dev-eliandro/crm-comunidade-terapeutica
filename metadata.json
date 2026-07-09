@@ -1,0 +1,6 @@
+{
+  "name": "CRM Comunidade Terapêutica",
+  "description": "Sistema de gestão e CRM para Comunidades Terapêuticas com prontuários, planos terapêuticos individuais, controle de medicamentos e relatórios de progresso.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
