@@ -10,9 +10,6 @@ export function createHash(value) {
     .update(String(value), "utf8")
     .digest("hex");
 
-  console.log("createHash()");
-  console.log("Valor :", JSON.stringify(value));
-  console.log("Hash  :", hash);
 
   return hash;
 }

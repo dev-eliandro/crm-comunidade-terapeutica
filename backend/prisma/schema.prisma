@@ -16,3 +16,98 @@ model User {
 
   @@map("users")
 }
+
+model Resident {
+  id String @id @default(cuid())
+
+  status String?
+  progressoPorcentagem Int?
+
+  solicitanteEquipamento String?
+  solicitanteMunicipio String?
+  solicitanteResponsavel String?
+  solicitanteData DateTime?
+
+  usuarioNome String
+  usuarioNomeSocial String?
+  usuarioDataNascimento DateTime?
+  usuarioNaturalidade String?
+  usuarioFiliacao String?
+  usuarioEstadoCivil String?
+
+  usuarioCPF String @unique
+  usuarioRG String?
+
+  usuarioSexoBiologico String?
+  usuarioIdentidadeGenero String?
+  usuarioPossuiCadastroUnico String?
+
+  usuarioEndereco String?
+  usuarioNumero String?
+  usuarioBairro String?
+  usuarioTelefone String?
+
+  usuarioSituacaoMoradia String?
+  usuarioTipoResidencia String?
+  usuarioPerfilDeficiencia String?
+
+  rendaPossui String?
+  rendaValor String?
+  rendaProfissao String?
+  rendaRecebeBeneficio String?
+  rendaRecebeBeneficioQual String?
+
+  termoAdesaoNome String?
+  termoAdesaoData DateTime?
+
+  relatoCaso String?
+
+  saudeMedicoNome String?
+  saudeMedicoCRM String?
+  saudeCID String?
+  saudeDataAvaliacao DateTime?
+  saudeApto String?
+
+  prontuarioRG String?
+  prontuarioRendaMensal String?
+  prontuarioDataIngresso DateTime?
+  prontuarioDataPrevistaTermino DateTime?
+
+  prontuarioResponsavelTecnicoNome String?
+  prontuarioResponsavelTecnicoRegistro String?
+  prontuarioResponsavelTecnicoData DateTime?
+
+  psaMotivoBusca String?
+  psaHistoriaProblemaAtualUltimoUso String?
+  psaTentativasAnterioresAbstinencia String?
+
+  psaGastoMedioSubstancias String?
+  psaObjetivosGerais String?
+
+  psaIntervencoesAtendimentosTerapeuticos String?
+  psaIntervencoesAtividadesEducativas String?
+  psaIntervencoesAcompanhamentoPsicologico String?
+  psaIntervencoesOutras String?
+
+  psaCriteriosAcompanhamento String?
+
+  psaExamesAnexados String?
+  psaLaudosAnexados String?
+
+  ocorrenciasEvasao String?
+  ocorrenciasAcidentes String?
+  ocorrenciasGerais String?
+
+  responsavelPsicologoNome String?
+  responsavelPsicologoCRP String?
+  responsavelPsicologoData DateTime?
+
+  responsavelAssistenteSocialNome String?
+  responsavelAssistenteSocialCRESS String?
+  responsavelAssistenteSocialData DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("residents")
+}

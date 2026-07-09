@@ -252,7 +252,7 @@ export default function ResidentForm({ onSave, onCancel, residentToEdit }: Resid
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    await api.post("/residents", formData);
   };
 
   return (

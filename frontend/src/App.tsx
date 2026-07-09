@@ -7,6 +7,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Acolhido, MedicationLog, Medication } from './types';
 import { MOCK_ACOLHIDOS } from './mockData';
 import Dashboard from './components/Dashboard';
+import ResidentService, { mapAcolhidoToResident } from './services/residentService';
 import ResidentList from './components/ResidentList';
 import ResidentForm from './components/ResidentForm';
 import ResidentProfile from './components/ResidentProfile';
@@ -40,7 +41,7 @@ export default function App() {
         console.error("Erro ao carregar acolhidos do localStorage", e);
       }
     }
-    return MOCK_ACOLHIDOS;
+    return [];
   });
 
   // Use real system time; remove simulated time state
@@ -292,6 +293,10 @@ export default function App() {
     verifySession();
   }, []);
 
+  useEffect(() => {
+    carregarAcolhidos();
+  }, []);
+
   // Sync state to local storage whenever they update
   useEffect(() => {
     localStorage.setItem('crm_acolhidos', JSON.stringify(acolhidos));
@@ -339,16 +344,18 @@ export default function App() {
   };
 
   // 5. RESIDENT CRUD OPERATIONAL STATE
-  const handleSaveResident = (formData: Acolhido) => {
-    const exists = acolhidos.some(a => a.id === formData.id);
-    if (exists) {
-      setAcolhidos(prev => prev.map(a => a.id === formData.id ? formData : a));
-    } else {
-      setAcolhidos(prev => [...prev, formData]);
+  const handleSaveResident = async (formData: Acolhido) => {
+    try {
+      const resident = mapAcolhidoToResident(formData);
+      await ResidentService.cadastrar(resident);
+
+      await carregarAcolhidos();
+      setResidentToEdit(null);
+      setActiveTab('acolhidos');
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao salvar acolhido.');
     }
-    // Return to main list
-    setActiveTab('acolhidos');
-    setResidentToEdit(null);
   };
 
   const handleEditResident = (resident: Acolhido) => {
@@ -393,6 +400,14 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
+  const carregarAcolhidos = async () => {
+    try {
+      const data = await ResidentService.listar();
+      setAcolhidos(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
   // Compute live active alert flags
   const activeAlertsCount = useMemo(() => {
     const nowDate = now;

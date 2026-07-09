@@ -5,15 +5,17 @@ import morgan from "morgan";
 
 import authRoutes from "./routes/auth.routes.js";
 import testRoutes from "./routes/test.routes.js";
+import residentRoutes from "./routes/residentRoutes.js";
+
 
 const app = express();
 
-app.use("/test", testRoutes);
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
-
 app.use(express.json());
+
+app.use("/api/test", testRoutes);
 
 app.get("/", (req, res) => {
     res.json({
@@ -23,6 +25,11 @@ app.get("/", (req, res) => {
     });
 });
 
+app.get("/health", (req, res) => {
+    res.json({ status: "ok" });
+});
+
 app.use("/api/auth", authRoutes);
+app.use("/api/residents", residentRoutes);
 
 export default app;
