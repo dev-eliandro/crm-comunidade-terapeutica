@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import api from "../services/api";
 import React, { useState } from 'react';
 import { Acolhido, SupportNetworkMember, FamilyContact, SubstanceHistory, ResidentStatus, BiologicalSex, GenderIdentity, HousingSituation, ResidenceType } from '../types';
 import { 
@@ -250,10 +251,13 @@ export default function ResidentForm({ onSave, onCancel, residentToEdit }: Resid
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    await api.post("/residents", formData);
-  };
+  const handleFormSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  await api.post("/residents", formData);
+
+  onSave(formData);
+};
 
   return (
     <div className="bg-[#0F1116] rounded-2xl border border-white/5 shadow-2xl p-6 max-w-4xl mx-auto space-y-6 text-slate-200 animate-fadeIn" id="resident-admission-form">
