@@ -9,6 +9,7 @@ import { Acolhido, MedicationLog, Medication } from './types';
 import { MOCK_ACOLHIDOS } from './mockData';
 import Dashboard from './components/Dashboard';
 import ResidentService, { mapAcolhidoToResident } from './services/residentService';
+import MedicationLogService from './services/medicationLogService';
 import ResidentList from './components/ResidentList';
 import ResidentForm from './components/ResidentForm';
 import ResidentProfile from './components/ResidentProfile';
@@ -33,72 +34,14 @@ import {
 
 export default function App() {
   // 1. MASTER STATE WITH LOCAL STORAGE PERSISTENCE
-  const [acolhidos, setAcolhidos] = useState<Acolhido[]>(() => {
-    const saved = localStorage.getItem('crm_acolhidos');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Erro ao carregar acolhidos do localStorage", e);
-      }
-    }
-    return [];
-  });
+  const [acolhidos, setAcolhidos] = useState<Acolhido[]>([]);
 
   // Use real system time; remove simulated time state
 
-  // Base list of logs for medications
-  const [medicationLogs, setMedicationLogs] = useState<MedicationLog[]>(() => {
-    const saved = localStorage.getItem('crm_medication_logs');
-    if (saved) {
-      try {
-        const parsed: MedicationLog[] = JSON.parse(saved);
-        // Migrate older logs that used medicationId = med.id to include resident prefix
-        const migrated = parsed.map(log => {
-          if (!log.medicationId.startsWith('rec-')) {
-            // Attempt to find the resident that has this medication id
-            for (const r of MOCK_ACOLHIDOS) {
-              if (r.medicacoes?.some(m => m.id === log.medicationId)) {
-                return { ...log, medicationId: `${r.id}-${log.medicationId}` };
-              }
-            }
-          }
-          return log;
-        });
-        return migrated;
-      } catch (e) {
-        console.error("Erro ao carregar logs de medicação", e);
-      }
-    }
-
-    // Generate initial logs for today based on MOCK_ACOLHIDOS
-    const logs: MedicationLog[] = [];
-    const today = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const yyyy = today.getFullYear();
-    const mm = pad(today.getMonth() + 1);
-    const dd = pad(today.getDate());
-    MOCK_ACOLHIDOS.forEach(acolhido => {
-      if (acolhido.status === 'Ativo' && acolhido.medicacoes) {
-        acolhido.medicacoes.forEach(med => {
-          if (med.ativo) {
-            med.horarios.forEach(hr => {
-              logs.push({
-                id: `${acolhido.id}-${med.id}-log-${hr}-${dd}`,
-                medicationId: `${acolhido.id}-${med.id}`,
-                medicationNome: med.nome,
-                dosagem: med.dosagem,
-                horarioPrevisto: `${yyyy}-${mm}-${dd}T${hr}:00`,
-                status: 'Pendente',
-                alertasAtivos: med.alertasAtivos
-              });
-            });
-          }
-        });
-      }
-    });
-    return logs;
-  });
+  // Logs de medicação: carregados do backend (compartilhados entre dispositivos).
+  // O estado inicial fica vazio e é populado pelo useEffect de carregamento abaixo.
+  const [medicationLogs, setMedicationLogs] = useState<MedicationLog[]>([]);
+  const [medicationLogsLoaded, setMedicationLogsLoaded] = useState(false);
 
   // Navigation and active UI tabs
   const [activeTab, setActiveTab] = useState<'dashboard' | 'acolhidos' | 'cadastro' | 'prescricoes' | 'perfil' | 'relatorios'>('dashboard');
@@ -298,14 +241,32 @@ export default function App() {
     carregarAcolhidos();
   }, []);
 
-  // Sync state to local storage whenever they update
+  // Carrega os logs de medicação do backend uma vez ao montar (dados compartilhados
+  // entre dispositivos, não mais dependentes do localStorage).
   useEffect(() => {
-    localStorage.setItem('crm_acolhidos', JSON.stringify(acolhidos));
-  }, [acolhidos]);
+    const carregarMedicationLogs = async () => {
+      try {
+        const logs = await MedicationLogService.listar();
+        setMedicationLogs(logs);
+      } catch (error) {
+        console.error("Erro ao carregar logs de medicação do servidor", error);
+      } finally {
+        setMedicationLogsLoaded(true);
+      }
+    };
 
+    carregarMedicationLogs();
+  }, []);
+
+  // Sincroniza (substitui) os logs no backend sempre que mudarem localmente.
+  // Ignora a primeira renderização (antes do carregamento inicial) para não
+  // sobrescrever os dados do servidor com o estado vazio inicial.
   useEffect(() => {
-    localStorage.setItem('crm_medication_logs', JSON.stringify(medicationLogs));
-  }, [medicationLogs]);
+    if (!medicationLogsLoaded) return;
+    MedicationLogService.sincronizar(medicationLogs).catch(error => {
+      console.error("Erro ao sincronizar logs de medicação com o servidor", error);
+    });
+  }, [medicationLogs, medicationLogsLoaded]);
 
   
 

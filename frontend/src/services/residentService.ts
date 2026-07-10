@@ -1,34 +1,23 @@
 import api from "./api";
+import { Acolhido } from "../types";
 
-export function mapAcolhidoToResident(acolhido: any) {
-  return {
-    status: acolhido.status,
-    usuarioNome: acolhido.nome,
-    usuarioNomeSocial: acolhido.nomeSocial,
-    usuarioCPF: acolhido.cpf,
-    usuarioRG: acolhido.rg,
-    usuarioTelefone: acolhido.telefone,
-    usuarioEndereco: acolhido.endereco,
-    usuarioNumero: acolhido.numero,
-    usuarioBairro: acolhido.bairro,
-    usuarioEstadoCivil: acolhido.estadoCivil,
-    usuarioNaturalidade: acolhido.naturalidade,
-    usuarioDataNascimento: acolhido.dataNascimento,
-    usuarioSexoBiologico: acolhido.sexo,
-    progressoPorcentagem: acolhido.progresso
-  };
+// Envia o objeto Acolhido praticamente como está: o backend já separa
+// automaticamente os campos escalares (colunas reais) do restante
+// (guardado em JSON), então não precisamos mais mapear campo a campo aqui.
+export function mapAcolhidoToResident(acolhido: Acolhido) {
+  return { ...acolhido };
 }
 
 class ResidentService {
-  async listar() {
+  async listar(): Promise<Acolhido[]> {
     return api.get("/residents");
   }
 
-  async cadastrar(data: any) {
+  async cadastrar(data: Partial<Acolhido>): Promise<Acolhido> {
     return api.post("/residents", data);
   }
 
-  async atualizar(id: string, data: any) {
+  async atualizar(id: string, data: Partial<Acolhido>): Promise<Acolhido> {
     return api.put(`/residents/${id}`, data);
   }
 

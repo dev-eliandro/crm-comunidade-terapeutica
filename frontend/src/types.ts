@@ -90,6 +90,7 @@ export interface Medication {
 
 export interface MedicationLog {
   id: string;
+  residentId: string;
   medicationId: string;
   medicationNome: string;
   dosagem: string;

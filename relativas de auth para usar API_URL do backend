@@ -1,0 +1,69 @@
+warning: in the working copy of 'frontend/src/App.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/services/api.ts', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/frontend/src/App.tsx b/frontend/src/App.tsx[m
+[1mindex 5c22146..d008b20 100644[m
+[1m--- a/frontend/src/App.tsx[m
+[1m+++ b/frontend/src/App.tsx[m
+[36m@@ -4,6 +4,7 @@[m
+  */[m
+ [m
+ import React, { useState, useEffect, useMemo } from 'react';[m
+[32m+[m[32mimport { API_URL } from './services/api';[m
+ import { Acolhido, MedicationLog, Medication } from './types';[m
+ import { MOCK_ACOLHIDOS } from './mockData';[m
+ import Dashboard from './components/Dashboard';[m
+[36m@@ -130,7 +131,7 @@[m [mexport default function App() {[m
+     setAuthMessage(null);[m
+ [m
+     try {[m
+[31m-      const response = await fetch('/api/auth/login', {[m
+[32m+[m[32m      const response = await fetch(`${API_URL}/auth/login`, {[m
+         method: 'POST',[m
+         headers: { 'Content-Type': 'application/json' },[m
+         body: JSON.stringify({ identifier: authForm.identifier, password: authForm.password }),[m
+[36m@@ -165,7 +166,7 @@[m [mexport default function App() {[m
+     }[m
+ [m
+     try {[m
+[31m-      const response = await fetch('/api/auth/register', {[m
+[32m+[m[32m      const response = await fetch(`${API_URL}/auth/register`, {[m
+         method: 'POST',[m
+         headers: { 'Content-Type': 'application/json' },[m
+         body: JSON.stringify({[m
+[36m@@ -198,7 +199,7 @@[m [mexport default function App() {[m
+     setAuthMessage(null);[m
+ [m
+     try {[m
+[31m-      const response = await fetch('/api/auth/forgot-password', {[m
+[32m+[m[32m      const response = await fetch(`${API_URL}/auth/forgot-password`, {[m
+         method: 'POST',[m
+         headers: { 'Content-Type': 'application/json' },[m
+         body: JSON.stringify({ email: authForm.email }),[m
+[36m@@ -232,7 +233,7 @@[m [mexport default function App() {[m
+     }[m
+ [m
+     try {[m
+[31m-      const response = await fetch('/api/auth/reset-password', {[m
+[32m+[m[32m      const response = await fetch(`${API_URL}/auth/reset-password`, {[m
+         method: 'POST',[m
+         headers: { 'Content-Type': 'application/json' },[m
+         body: JSON.stringify({ token: authForm.recoveryToken, newPassword: authForm.password }),[m
+[36m@@ -272,7 +273,7 @@[m [mexport default function App() {[m
+       }[m
+ [m
+       try {[m
+[31m-        const response = await fetch('/api/auth/me', {[m
+[32m+[m[32m        const response = await fetch(`${API_URL}/auth/me`, {[m
+           headers: { Authorization: `Bearer ${token}` },[m
+         });[m
+ [m
+[1mdiff --git a/frontend/src/services/api.ts b/frontend/src/services/api.ts[m
+[1mindex 0b8c5be..409c53c 100644[m
+[1m--- a/frontend/src/services/api.ts[m
+[1m+++ b/frontend/src/services/api.ts[m
+[36m@@ -1,4 +1,4 @@[m
+[31m-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";[m
+[32m+[m[32mexport const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";[m
+ [m
+ class Api {[m
+   async get(endpoint: string) {[m

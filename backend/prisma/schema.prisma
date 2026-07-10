@@ -106,8 +106,36 @@ model Resident {
   responsavelAssistenteSocialCRESS String?
   responsavelAssistenteSocialData DateTime?
 
+  // Campos compostos/listas do prontuário (rede de apoio, familiares, atividades,
+  // intercorrências, saídas, frequência, histórico de substâncias, evoluções,
+  // comunicações com família, medicações, etc.) guardados como JSON para preservar
+  // fidelidade total com o formulário do frontend sem precisar de uma tabela por seção.
+  dadosCompletos Json? @map("dados_completos")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  medicationLogs MedicationLog[]
+
   @@map("residents")
+}
+
+model MedicationLog {
+  id               String    @id @default(cuid())
+  residentId       String    @map("resident_id")
+  resident         Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
+
+  medicationId     String    @map("medication_id")
+  medicationNome   String    @map("medication_nome")
+  dosagem          String?
+  horarioPrevisto  String    @map("horario_previsto")
+  horarioRealizado String?   @map("horario_realizado")
+  status           String
+  administradoPor  String?   @map("administrado_por")
+  alertasAtivos    Boolean?  @map("alertas_ativos")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("medication_logs")
 }

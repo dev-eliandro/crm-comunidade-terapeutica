@@ -2,9 +2,6 @@ import "dotenv/config";
 import { Router } from "express";
 import prisma from "../config/prisma.js";
 
-console.log("DATABASE_URL:");
-console.log(process.env.DATABASE_URL);
-
 const router = Router();
 
 router.get("/create-resident", async (req, res) => {

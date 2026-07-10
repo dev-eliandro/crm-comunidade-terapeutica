@@ -6,6 +6,7 @@ import morgan from "morgan";
 import authRoutes from "./routes/auth.routes.js";
 import testRoutes from "./routes/test.routes.js";
 import residentRoutes from "./routes/residentRoutes.js";
+import medicationLogRoutes from "./routes/medicationLogRoutes.js";
 
 
 const app = express();
@@ -31,5 +32,6 @@ app.get("/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/residents", residentRoutes);
+app.use("/api/medication-logs", medicationLogRoutes);
 
 export default app;
