@@ -1,0 +1,92 @@
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index 935a7b1..f60569e 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -309,7 +309,14 @@ export default function App() {
+   const handleSaveResident = async (formData: Acolhido) => {
+     try {
+       const resident = mapAcolhidoToResident(formData);
+-      await ResidentService.cadastrar(resident);
++
++      // Se já existe um id, é uma edição: precisa ir por PUT (atualizar),
++      // senão o backend cria um registro novo em vez de atualizar o existente.
++      if (formData.id) {
++        await ResidentService.atualizar(formData.id, resident);
++      } else {
++        await ResidentService.cadastrar(resident);
++      }
+ 
+       await carregarAcolhidos();
+       setResidentToEdit(null);
+@@ -325,19 +332,37 @@ export default function App() {
+     setActiveTab('cadastro');
+   };
+ 
+-  const handleDeleteResident = (id: string) => {
++  const handleDeleteResident = async (id: string) => {
+     if (window.confirm("Atenção: Tem certeza de que deseja remover permanentemente este registro de acolhido?")) {
+-      setAcolhidos(prev => prev.filter(a => a.id !== id));
+-      setMedicationLogs(prev => prev.filter(log => !log.medicationId.startsWith(id)));
+-      if (selectedResidentId === id) {
+-        setSelectedResidentId(null);
+-        setActiveTab('acolhidos');
++      try {
++        await ResidentService.excluir(id);
++
++        setAcolhidos(prev => prev.filter(a => a.id !== id));
++        setMedicationLogs(prev => prev.filter(log => !log.medicationId.startsWith(id)));
++        if (selectedResidentId === id) {
++          setSelectedResidentId(null);
++          setActiveTab('acolhidos');
++        }
++      } catch (error) {
++        console.error(error);
++        alert('Erro ao excluir acolhido.');
+       }
+     }
+   };
+ 
+-  const handleUpdateResidentDirectly = (updated: Acolhido) => {
++  const handleUpdateResidentDirectly = async (updated: Acolhido) => {
++    // Atualização otimista: reflete na tela imediatamente...
+     setAcolhidos(prev => prev.map(a => a.id === updated.id ? updated : a));
++
++    try {
++      // ...e persiste no backend. Em caso de erro, recarrega do servidor
++      // para não deixar a tela mostrando algo que não foi salvo de verdade.
++      await ResidentService.atualizar(updated.id, mapAcolhidoToResident(updated));
++    } catch (error) {
++      console.error(error);
++      alert('Erro ao salvar alteração do acolhido. Os dados serão recarregados do servidor.');
++      await carregarAcolhidos();
++    }
+   };
+ 
+   // Select a resident for detailed profile viewing
+@@ -347,9 +372,24 @@ export default function App() {
+   };
+ 
+   // Add a family communication record for a resident
+-  const handleAddFamilyCommunication = (residentId: string, comm: Omit<import('./types').FamilyCommunication, 'id'>) => {
++  const handleAddFamilyCommunication = async (residentId: string, comm: Omit<import('./types').FamilyCommunication, 'id'>) => {
+     const entry = { ...comm, id: `com-${Date.now()}` };
+-    setAcolhidos(prev => prev.map(a => a.id === residentId ? { ...a, comunicacoesFamilia: [...(a.comunicacoesFamilia || []), entry] } : a));
++
++    const resident = acolhidos.find(a => a.id === residentId);
++    if (!resident) return;
++
++    const updated = { ...resident, comunicacoesFamilia: [...(resident.comunicacoesFamilia || []), entry] };
++
++    // Atualização otimista + persistência no backend (mesmo padrão de handleUpdateResidentDirectly).
++    setAcolhidos(prev => prev.map(a => a.id === residentId ? updated : a));
++
++    try {
++      await ResidentService.atualizar(residentId, mapAcolhidoToResident(updated));
++    } catch (error) {
++      console.error(error);
++      alert('Erro ao salvar comunicação com a família. Os dados serão recarregados do servidor.');
++      await carregarAcolhidos();
++    }
+   };
+ 
+   const currentProfileResident = useMemo(() => {

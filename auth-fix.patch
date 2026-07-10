@@ -1,0 +1,521 @@
+diff --git a/backend/src/auth.db b/backend/src/auth.db
+deleted file mode 100644
+index 0cf1406..0000000
+Binary files a/backend/src/auth.db and /dev/null differ
+diff --git a/backend/src/controllers/AuthController.js b/backend/src/controllers/AuthController.js
+index 8355621..d634405 100644
+--- a/backend/src/controllers/AuthController.js
++++ b/backend/src/controllers/AuthController.js
+@@ -3,25 +3,53 @@ import AuthService from "../services/AuthService.js";
+ class AuthController {
+ 
+     async login(req, res) {
+-
+         try {
+-
+             const { identifier, password } = req.body;
++            const result = await AuthService.login(identifier, password);
++            return res.json(result);
++        } catch (error) {
++            return res.status(401).json({ message: error.message });
++        }
++    }
+ 
+-            const user = await AuthService.login(identifier, password);
+-
+-            return res.json(user);
+-
++    async register(req, res) {
++        try {
++            const result = await AuthService.register(req.body);
++            return res.status(201).json(result);
+         } catch (error) {
++            return res.status(409).json({ message: error.message });
++        }
++    }
+ 
+-            return res.status(401).json({
+-                message: error.message
+-            });
++    async forgotPassword(req, res) {
++        try {
++            const { email } = req.body;
++            const result = await AuthService.forgotPassword(email);
++            return res.json(result);
++        } catch (error) {
++            return res.status(404).json({ message: error.message });
++        }
++    }
+ 
++    async resetPassword(req, res) {
++        try {
++            const { token, newPassword } = req.body;
++            const result = await AuthService.resetPassword(token, newPassword);
++            return res.json(result);
++        } catch (error) {
++            return res.status(400).json({ message: error.message });
+         }
++    }
+ 
++    async me(req, res) {
++        try {
++            const user = await AuthService.me(req.user.id);
++            return res.json({ user });
++        } catch (error) {
++            return res.status(401).json({ message: error.message });
++        }
+     }
+ 
+ }
+ 
+-export default new AuthController();
+\ No newline at end of file
++export default new AuthController();
+diff --git a/backend/src/db.js b/backend/src/db.js
+deleted file mode 100644
+index 5ea18df..0000000
+--- a/backend/src/db.js
++++ /dev/null
+@@ -1,122 +0,0 @@
+-import "dotenv/config";
+-import { PrismaClient } from "@prisma/client";
+-import crypto from "crypto";
+-
+-const prisma = new PrismaClient();
+-
+-export function createHash(value) {
+-  const hash = crypto
+-    .createHash("sha256")
+-    .update(String(value), "utf8")
+-    .digest("hex");
+-
+-
+-  return hash;
+-}
+-
+-export async function initDb() {
+-  console.log("PostgreSQL conectado.");
+-  await seedDefaultUser();
+-}
+-
+-export async function seedDefaultUser() {
+-  const existing = await prisma.user.findUnique({
+-    where: {
+-      username: "admin",
+-    },
+-  });
+-
+-  if (!existing) {
+-    await prisma.user.create({
+-      data: {
+-        username: "admin",
+-        email: "admin@crm.local",
+-        passwordHash: createHash("123456"),
+-      },
+-    });
+-
+-    
+-  }
+-}
+-
+-export async function findUserByIdentifier(identifier) {
+-  return prisma.user.findFirst({
+-    where: {
+-      OR: [
+-        { username: identifier },
+-        { email: identifier },
+-      ],
+-    },
+-  });
+-}
+-
+-export async function findUserByEmail(email) {
+-  return prisma.user.findUnique({
+-    where: {
+-      email,
+-    },
+-  });
+-}
+-
+-export async function findUserByResetToken(token) {
+-  return prisma.user.findFirst({
+-    where: {
+-      resetToken: token,
+-    },
+-  });
+-}
+-
+-export async function createUser({
+-  username,
+-  email,
+-  passwordHash,
+-}) {
+-  return prisma.user.create({
+-    data: {
+-      username,
+-      email,
+-      passwordHash,
+-    },
+-  });
+-}
+-
+-export async function updateUserPassword(id, passwordHash) {
+-  return prisma.user.update({
+-    where: {
+-      id,
+-    },
+-    data: {
+-      passwordHash,
+-    },
+-  });
+-}
+-
+-export async function setResetToken(email, token) {
+-  return prisma.user.update({
+-    where: {
+-      email,
+-    },
+-    data: {
+-      resetToken: token,
+-    },
+-  });
+-}
+-
+-export async function clearResetToken(id) {
+-  return prisma.user.update({
+-    where: {
+-      id,
+-    },
+-    data: {
+-      resetToken: null,
+-    },
+-  });
+-}
+-
+-export async function getUserById(id) {
+-  return prisma.user.findUnique({
+-    where: {
+-      id,
+-    },
+-  });
+-}
+\ No newline at end of file
+diff --git a/backend/src/middlewares/authMiddleware.js b/backend/src/middlewares/authMiddleware.js
+new file mode 100644
+index 0000000..2b03381
+--- /dev/null
++++ b/backend/src/middlewares/authMiddleware.js
+@@ -0,0 +1,19 @@
++import { verifyToken } from "../utils/jwt.js";
++
++// Protege rotas exigindo um Bearer token válido.
++// Em caso de sucesso, disponibiliza os dados do usuário em req.user.
++export function requireAuth(req, res, next) {
++  const authHeader = req.headers.authorization || "";
++  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
++
++  if (!token) {
++    return res.status(401).json({ message: "Não autenticado." });
++  }
++
++  try {
++    req.user = verifyToken(token);
++    return next();
++  } catch (error) {
++    return res.status(401).json({ message: "Sessão inválida ou expirada." });
++  }
++}
+diff --git a/backend/src/repositories/UserRepository.js b/backend/src/repositories/UserRepository.js
+index d4ad569..897a1fa 100644
+--- a/backend/src/repositories/UserRepository.js
++++ b/backend/src/repositories/UserRepository.js
+@@ -40,6 +40,26 @@ class UserRepository {
+     });
+   }
+ 
++  async findByResetToken(token) {
++    return prisma.user.findFirst({
++      where: { resetToken: token }
++    });
++  }
++
++  async setResetToken(email, token) {
++    return prisma.user.update({
++      where: { email },
++      data: { resetToken: token }
++    });
++  }
++
++  async clearResetToken(id) {
++    return prisma.user.update({
++      where: { id },
++      data: { resetToken: null }
++    });
++  }
++
+ }
+ 
+ export default new UserRepository();
+\ No newline at end of file
+diff --git a/backend/src/routes/auth.routes.js b/backend/src/routes/auth.routes.js
+index 2d2056a..bdb6211 100644
+--- a/backend/src/routes/auth.routes.js
++++ b/backend/src/routes/auth.routes.js
+@@ -1,8 +1,13 @@
+ import { Router } from "express";
+ import AuthController from "../controllers/AuthController.js";
++import { requireAuth } from "../middlewares/authMiddleware.js";
+ 
+ const router = Router();
+ 
+ router.post("/login", AuthController.login);
++router.post("/register", AuthController.register);
++router.post("/forgot-password", AuthController.forgotPassword);
++router.post("/reset-password", AuthController.resetPassword);
++router.get("/me", requireAuth, AuthController.me);
+ 
+-export default router;
+\ No newline at end of file
++export default router;
+diff --git a/backend/src/routes/medicationLogRoutes.js b/backend/src/routes/medicationLogRoutes.js
+index 095505e..1af483b 100644
+--- a/backend/src/routes/medicationLogRoutes.js
++++ b/backend/src/routes/medicationLogRoutes.js
+@@ -1,8 +1,11 @@
+ import { Router } from "express";
+ import MedicationLogController from "../controllers/MedicationLogController.js";
++import { requireAuth } from "../middlewares/authMiddleware.js";
+ 
+ const router = Router();
+ 
++router.use(requireAuth);
++
+ router.get("/", MedicationLogController.list);
+ router.put("/", MedicationLogController.replaceAll);
+ 
+diff --git a/backend/src/routes/residentRoutes.js b/backend/src/routes/residentRoutes.js
+index 4d2cc36..a831d8f 100644
+--- a/backend/src/routes/residentRoutes.js
++++ b/backend/src/routes/residentRoutes.js
+@@ -1,16 +1,15 @@
+ import { Router } from "express";
+ import ResidentController from "../controllers/ResidentController.js";
++import { requireAuth } from "../middlewares/authMiddleware.js";
+ 
+ const router = Router();
+ 
+-router.get("/", ResidentController.list);
++router.use(requireAuth);
+ 
++router.get("/", ResidentController.list);
+ router.get("/:id", ResidentController.get);
+-
+ router.post("/", ResidentController.create);
+-
+ router.put("/:id", ResidentController.update);
+-
+ router.delete("/:id", ResidentController.delete);
+ 
+-export default router;
+\ No newline at end of file
++export default router;
+diff --git a/backend/src/services/AuthService.js b/backend/src/services/AuthService.js
+index 75cf9bb..b072e0c 100644
+--- a/backend/src/services/AuthService.js
++++ b/backend/src/services/AuthService.js
+@@ -1,32 +1,85 @@
++import crypto from "crypto";
+ import UserRepository from "../repositories/UserRepository.js";
+-import { createHash } from "../db.js";
++import { createHash } from "../utils/hash.js";
++import { signToken } from "../utils/jwt.js";
++
++function sanitizeUser(user) {
++  return { id: user.id, username: user.username, email: user.email };
++}
+ 
+ class AuthService {
+ 
+     async login(identifier, password) {
+-
+         const user = await UserRepository.findByIdentifier(identifier);
+ 
+-        console.log("Usuário encontrado:", user);
++        // Mensagem genérica de propósito: não revela se foi o usuário ou a
++        // senha que estava errada (evita enumeração de usuários existentes).
++        if (!user || user.passwordHash !== createHash(password)) {
++            throw new Error("Usuário ou senha incorretos.");
++        }
++
++        return { token: signToken(user), user: sanitizeUser(user) };
++    }
++
++    async register({ username, email, password }) {
++        if (!username || !email || !password) {
++            throw new Error("Preencha todos os campos.");
++        }
++
++        const existing =
++            (await UserRepository.findByIdentifier(username)) ||
++            (await UserRepository.findByEmail(email));
++
++        if (existing) {
++            throw new Error("Usuário ou e-mail já cadastrados.");
++        }
++
++        const user = await UserRepository.create({
++            username,
++            email,
++            passwordHash: createHash(password),
++        });
++
++        return { token: signToken(user), user: sanitizeUser(user) };
++    }
+ 
++    async forgotPassword(email) {
++        const user = await UserRepository.findByEmail(email);
+         if (!user) {
+-            throw new Error("Usuário não encontrado.");
++            throw new Error("E-mail não encontrado.");
+         }
+ 
+-        const hash = createHash(password);
++        const resetToken = crypto.randomBytes(8).toString("hex");
++        await UserRepository.setResetToken(email, resetToken);
+ 
+-        console.log("Hash digitado :", hash);
+-        console.log("Hash banco    :", user.passwordHash);
+-        console.log("São iguais?   :", hash === user.passwordHash);
++        // TODO: quando houver um provedor de e-mail configurado, enviar o
++        // token por e-mail em vez de devolvê-lo na resposta da API.
++        return {
++            message: "Instruções de recuperação enviadas para o e-mail informado.",
++            resetToken,
++        };
++    }
+ 
+-        if (user.passwordHash !== hash) {
+-            throw new Error("Senha inválida.");
++    async resetPassword(token, newPassword) {
++        const user = await UserRepository.findByResetToken(token);
++        if (!user) {
++            throw new Error("Token inválido ou expirado.");
+         }
+ 
+-        return user;
++        await UserRepository.updatePassword(user.id, createHash(newPassword));
++        await UserRepository.clearResetToken(user.id);
+ 
++        return { message: "Senha redefinida com sucesso." };
++    }
++
++    async me(userId) {
++        const user = await UserRepository.findById(userId);
++        if (!user) {
++            throw new Error("Usuário não encontrado.");
++        }
++        return sanitizeUser(user);
+     }
+ 
+ }
+ 
+-export default new AuthService();
+\ No newline at end of file
++export default new AuthService();
+diff --git a/backend/src/utils/hash.js b/backend/src/utils/hash.js
+new file mode 100644
+index 0000000..3623563
+--- /dev/null
++++ b/backend/src/utils/hash.js
+@@ -0,0 +1,7 @@
++import crypto from "crypto";
++
++// Mantém o mesmo algoritmo (SHA-256) já usado para os usuários existentes
++// no banco, para não invalidar os hashes já salvos no Postgres/Supabase.
++export function createHash(value) {
++  return crypto.createHash("sha256").update(String(value), "utf8").digest("hex");
++}
+diff --git a/backend/src/utils/jwt.js b/backend/src/utils/jwt.js
+new file mode 100644
+index 0000000..e2bc284
+--- /dev/null
++++ b/backend/src/utils/jwt.js
+@@ -0,0 +1,23 @@
++import jwt from "jsonwebtoken";
++
++const JWT_SECRET = process.env.JWT_SECRET;
++const EXPIRES_IN = "8h";
++
++if (!JWT_SECRET) {
++  // Não derruba o processo (para não quebrar scripts utilitários), mas avisa alto.
++  console.warn(
++    "[auth] JWT_SECRET não definido no .env — defina uma chave forte antes de ir para produção."
++  );
++}
++
++export function signToken(user) {
++  return jwt.sign(
++    { id: user.id, username: user.username, email: user.email },
++    JWT_SECRET || "dev-secret-nao-use-em-producao",
++    { expiresIn: EXPIRES_IN }
++  );
++}
++
++export function verifyToken(token) {
++  return jwt.verify(token, JWT_SECRET || "dev-secret-nao-use-em-producao");
++}
+diff --git a/frontend/src/services/api.ts b/frontend/src/services/api.ts
+index 409c53c..12ac910 100644
+--- a/frontend/src/services/api.ts
++++ b/frontend/src/services/api.ts
+@@ -1,8 +1,17 @@
+ export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+ 
++function authHeaders(): Record<string, string> {
++  const token = localStorage.getItem("crm_auth_token");
++  return token ? { Authorization: `Bearer ${token}` } : {};
++}
++
+ class Api {
+   async get(endpoint: string) {
+-    const response = await fetch(`${API_URL}${endpoint}`);
++    const response = await fetch(`${API_URL}${endpoint}`, {
++      headers: {
++        ...authHeaders()
++      }
++    });
+ 
+     if (!response.ok) {
+       throw new Error("Erro na requisição.");
+@@ -15,7 +24,8 @@ class Api {
+     const response = await fetch(`${API_URL}${endpoint}`, {
+       method: "POST",
+       headers: {
+-        "Content-Type": "application/json"
++        "Content-Type": "application/json",
++        ...authHeaders()
+       },
+       body: JSON.stringify(body)
+     });
+@@ -31,7 +41,8 @@ class Api {
+     const response = await fetch(`${API_URL}${endpoint}`, {
+       method: "PUT",
+       headers: {
+-        "Content-Type": "application/json"
++        "Content-Type": "application/json",
++        ...authHeaders()
+       },
+       body: JSON.stringify(body)
+     });
+@@ -45,7 +56,10 @@ class Api {
+ 
+   async delete(endpoint: string) {
+     const response = await fetch(`${API_URL}${endpoint}`, {
+-      method: "DELETE"
++      method: "DELETE",
++      headers: {
++        ...authHeaders()
++      }
+     });
+ 
+     if (!response.ok) {
