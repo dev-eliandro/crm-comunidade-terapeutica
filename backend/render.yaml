@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: crm-backend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npx prisma migrate deploy --schema=./prisma/schema.prisma && npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
