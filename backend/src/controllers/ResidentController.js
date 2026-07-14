@@ -30,14 +30,6 @@ async create(req, res) {
         res.json(resident);
     }
 
-    async create(req, res) {
-
-        const resident = await ResidentService.create(req.body);
-
-        res.status(201).json(resident);
-
-    }
-
     async update(req, res) {
 
         const resident = await ResidentService.update(
