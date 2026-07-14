@@ -1,54 +1,31 @@
 import ResidentService from "../services/ResidentService.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 class ResidentController {
-async create(req, res) {
+  create = asyncHandler(async (req, res) => {
+    const resident = await ResidentService.create(req.body);
+    res.status(201).json(resident);
+  });
 
-    try {
+  list = asyncHandler(async (req, res) => {
+    const residents = await ResidentService.list();
+    res.json(residents);
+  });
 
-        const resident = await ResidentService.create(req.body);
+  get = asyncHandler(async (req, res) => {
+    const resident = await ResidentService.get(req.params.id);
+    res.json(resident);
+  });
 
-        return res.status(201).json(resident);
+  update = asyncHandler(async (req, res) => {
+    const resident = await ResidentService.update(req.params.id, req.body);
+    res.json(resident);
+  });
 
-    } catch (error) {
-
-        console.error(error);
-
-        return res.status(500).json({
-            message: error.message
-        });
-
-    }
-
-}
-    async list(req, res) {
-        const residents = await ResidentService.list();
-        res.json(residents);
-    }
-
-    async get(req, res) {
-        const resident = await ResidentService.get(req.params.id);
-        res.json(resident);
-    }
-
-    async update(req, res) {
-
-        const resident = await ResidentService.update(
-            req.params.id,
-            req.body
-        );
-
-        res.json(resident);
-
-    }
-
-    async delete(req, res) {
-
-        await ResidentService.delete(req.params.id);
-
-        res.sendStatus(204);
-
-    }
-
+  delete = asyncHandler(async (req, res) => {
+    await ResidentService.delete(req.params.id);
+    res.sendStatus(204);
+  });
 }
 
 export default new ResidentController();

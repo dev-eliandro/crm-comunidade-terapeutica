@@ -40,6 +40,26 @@ class UserRepository {
     });
   }
 
+  async findByResetToken(token) {
+    return prisma.user.findFirst({
+      where: { resetToken: token }
+    });
+  }
+
+  async setResetToken(email, token) {
+    return prisma.user.update({
+      where: { email },
+      data: { resetToken: token }
+    });
+  }
+
+  async clearResetToken(id) {
+    return prisma.user.update({
+      where: { id },
+      data: { resetToken: null }
+    });
+  }
+
 }
 
 export default new UserRepository();

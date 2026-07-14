@@ -34,4 +34,14 @@ app.use("/api/auth", authRoutes);
 app.use("/api/residents", residentRoutes);
 app.use("/api/medication-logs", medicationLogRoutes);
 
+// Middleware de erro do Express: captura qualquer exceção/rejeição que os
+// controllers propaguem (inclusive as que escapam do try/catch de algum
+// controller específico) e responde com JSON em vez de deixar a conexão
+// travada ou o processo cair. Precisa ser o ÚLTIMO app.use().
+app.use((error, req, res, next) => {
+  console.error("[erro não tratado na rota]", error);
+  if (res.headersSent) return next(error);
+  res.status(500).json({ message: "Erro interno no servidor." });
+});
+
 export default app;

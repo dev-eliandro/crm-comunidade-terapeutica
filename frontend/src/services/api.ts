@@ -1,8 +1,17 @@
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("crm_auth_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 class Api {
   async get(endpoint: string) {
-    const response = await fetch(`${API_URL}${endpoint}`);
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      headers: {
+        ...authHeaders()
+      }
+    });
 
     if (!response.ok) {
       throw new Error("Erro na requisição.");
@@ -15,7 +24,8 @@ class Api {
     const response = await fetch(`${API_URL}${endpoint}`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        ...authHeaders()
       },
       body: JSON.stringify(body)
     });
@@ -31,7 +41,8 @@ class Api {
     const response = await fetch(`${API_URL}${endpoint}`, {
       method: "PUT",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        ...authHeaders()
       },
       body: JSON.stringify(body)
     });
@@ -45,7 +56,10 @@ class Api {
 
   async delete(endpoint: string) {
     const response = await fetch(`${API_URL}${endpoint}`, {
-      method: "DELETE"
+      method: "DELETE",
+      headers: {
+        ...authHeaders()
+      }
     });
 
     if (!response.ok) {
